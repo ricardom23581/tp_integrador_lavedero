@@ -1,0 +1,22 @@
+{
+  "name": "backend-lavedero",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node --env-file=.env index.js",
+    "dev": "node --watch --env-file=.env index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "express": "^5.3.0",
+    "sequelize": "^6.37.8",
+    "sqlite3": "^6.0.1",
+    "zod": "^4.6.7"
+  }
+}
+
