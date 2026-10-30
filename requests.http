@@ -1,2 +1,43 @@
+@base = http://localhost:3000
+
 ### Health check
-GET http://localhost:3000/health
+GET {{base}}/health
+
+### Listar turnos
+GET {{base}}/api/turnos
+
+### Obtener un turno
+GET {{base}}/api/turnos/1
+
+### Turno inexistente (404)
+GET {{base}}/api/turnos/999
+
+### Crear turno (201)
+POST {{base}}/api/turnos
+Content-Type: application/json
+
+{
+  "clienteId": 2,
+  "patente": "AC456BD",
+  "fecha": "2026-11-04T11:15",
+  "tipoVehiculo": "moto"
+}
+
+### Crear turno con datos faltantes (400)
+POST {{base}}/api/turnos
+Content-Type: application/json
+
+{
+  "patente": "AC456BD"
+}
+
+### Actualizar estado (200)
+PUT {{base}}/api/turnos/1
+Content-Type: application/json
+
+{
+  "estado": "En proceso de lavado"
+}
+
+### Eliminar turno (204)
+DELETE {{base}}/api/turnos/2

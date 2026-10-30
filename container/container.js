@@ -1,14 +1,18 @@
 /**
  * Composition root: arma las dependencias de la app.
- * Según PERSISTENCE_TYPE elige qué DAO inyectar.
+ * Según PERSISTENCE_TYPE elige qué DAO inyectar, y devuelve el router principal.
  */
+import { Router } from "express";
 import config from "../config/config.js";
+import TurnosMemoryDao from "../dao/memory/TurnosMemoryDao.js";
+import { turnosSeed } from "../dao/memory/seed.js";
+import { makeTurnosController } from "../controllers/turnosController.js";
+import { crearTurnosRouter } from "../routes/turnosRoutes.js";
 
 function crearDaos(tipo) {
   if (tipo === "memory") {
     return {
-      // clientesDao: new ClientesMemoryDao(),
-      // obrasDao: new ObrasMemoryDao(),
+      turnosDao: new TurnosMemoryDao(turnosSeed),
     };
   }
   if (tipo === "sequelize") {
@@ -20,8 +24,12 @@ function crearDaos(tipo) {
 export function crearContainer() {
   const daos = crearDaos(config.persistenceType);
 
-  // Acá después se agregan: casos de uso (reciben los daos)
-  // y controllers (reciben los casos de uso)
+  const controllers = {
+    turnos: makeTurnosController(daos.turnosDao),
+  };
 
-  return { daos };
+  const router = Router();
+  router.use("/turnos", crearTurnosRouter(controllers.turnos));
+
+  return { daos, controllers, router };
 }
