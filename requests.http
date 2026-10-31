@@ -56,3 +56,64 @@ GET {{base}}/api/turnos?page=2&limit=3
 
 ### Ruta inexistente (404 en JSON, ya no en HTML)
 GET {{base}}/api/clientes
+
+### --- CLASE 6: VALIDACIÓN Y ERRORES ---
+
+### Query inválida (400 con details)
+GET {{base}}/api/turnos?page=abc&limit=500&sort=precio&estado=x
+
+### Id no numérico (400)
+GET {{base}}/api/turnos/abc
+
+### Crear: patente en minúscula y con espacios, más campos que no van (201, limpia todo)
+POST {{base}}/api/turnos
+Content-Type: application/json
+
+{
+  "clienteId": 2,
+  "patente": " ac456bd ",
+  "fecha": "2026-11-04T11:15",
+  "tipoVehiculo": "moto",
+  "estado": "Lavado finalizado",
+  "id": 99
+}
+
+### Crear con todo mal (400 con un detail por campo)
+POST {{base}}/api/turnos
+Content-Type: application/json
+
+{
+  "clienteId": "dos",
+  "patente": "123",
+  "fecha": "mañana",
+  "tipoVehiculo": "bici"
+}
+
+### JSON mal formado (400 JSON_INVALIDO)
+POST {{base}}/api/turnos
+Content-Type: application/json
+
+{malformado
+
+### PUT vacío (400)
+PUT {{base}}/api/turnos/1
+Content-Type: application/json
+
+{}
+
+### PUT con estado inválido (400)
+PUT {{base}}/api/turnos/1
+Content-Type: application/json
+
+{
+  "estado": "Listo"
+}
+
+### PUT intentando cambiar el cliente (200, pero clienteId se ignora)
+PUT {{base}}/api/turnos/1
+Content-Type: application/json
+
+{
+  "estado": "En proceso de lavado",
+  "clienteId": 7
+}
