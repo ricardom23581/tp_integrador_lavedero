@@ -41,3 +41,18 @@ Content-Type: application/json
 
 ### Eliminar turno (204)
 DELETE {{base}}/api/turnos/2
+
+### Filtrar por estado (los espacios van como %20)
+GET {{base}}/api/turnos?estado=Esperando%20el%20servicio
+
+### Turnos de un día
+GET {{base}}/api/turnos?fecha=2026-11-03
+
+### Turnos de un cliente, del más nuevo al más viejo
+GET {{base}}/api/turnos?clienteId=3&sort=-fecha
+
+### Paginación: página 2, de a 3 (mirá el header X-Total-Count)
+GET {{base}}/api/turnos?page=2&limit=3
+
+### Ruta inexistente (404 en JSON, ya no en HTML)
+GET {{base}}/api/clientes
