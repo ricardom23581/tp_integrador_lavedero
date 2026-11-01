@@ -179,3 +179,36 @@ Content-Type: application/json
 
 ### Eliminar usuario (204)
 DELETE {{base}}/api/usuarios/3
+
+### --- PASO 3: RELACIÓN TURNOS ↔ USUARIOS ---
+
+### Crear turno con usuario inexistente (404 USUARIO_NO_ENCONTRADO)
+POST {{base}}/api/turnos
+Content-Type: application/json
+
+{
+  "clienteId": 999,
+  "patente": "AC456BD",
+  "fecha": "2026-11-05T11:00",
+  "tipoVehiculo": "auto"
+}
+
+### Crear turno con usuario existente (201)
+POST {{base}}/api/turnos
+Content-Type: application/json
+
+{
+  "clienteId": 3,
+  "patente": "AC456BD",
+  "fecha": "2026-11-05T11:00",
+  "tipoVehiculo": "auto"
+}
+
+### Eliminar al admin (409 ADMIN_NO_ELIMINABLE)
+DELETE {{base}}/api/usuarios/1
+
+### Eliminar un cliente con turnos (204): sus turnos desaparecen
+DELETE {{base}}/api/usuarios/2
+
+### Ver que los turnos del cliente 2 ya no están
+GET {{base}}/api/turnos?clienteId=2

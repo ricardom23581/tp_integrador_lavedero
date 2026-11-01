@@ -6,14 +6,13 @@ import deleteTurno from "./deleteTurno.js";
 
 /**
  * Factory de casos de uso de turnos.
- * Recibe el DAO y lo inyecta en cada caso de uso, así el controller
- * nunca conoce un DAO concreto.
+ * Recibe el DAO de turnos y el de usuarios (para validar la relación al crear).
  */
-function makeTurnoUseCases(dao) {
+function makeTurnoUseCases(dao, usuariosDao) {
   return {
     getTurnos: (filters) => getTurnos(filters, dao),
     getTurnoById: (id) => getTurnoById(id, dao),
-    createTurno: (data) => createTurno(data, dao),
+    createTurno: (data) => createTurno(data, dao, usuariosDao),
     updateTurno: (id, cambios) => updateTurno(id, cambios, dao),
     deleteTurno: (id) => deleteTurno(id, dao),
   };

@@ -1,7 +1,7 @@
 /**
  * Composition root: arma las dependencias de la app.
  * Cadena: DAO → casos de uso → controller → router.
- * Según PERSISTENCE_TYPE elige qué DAOs inyectar, y devuelve el router principal.
+ * Los casos de uso que cruzan entidades reciben los dos DAOs.
  */
 import { Router } from "express";
 import config from "../config/config.js";
@@ -32,8 +32,8 @@ export function crearContainer() {
   const daos = crearDaos(config.persistenceType);
 
   const useCases = {
-    turnos: makeTurnoUseCases(daos.turnosDao),
-    usuarios: makeUsuarioUseCases(daos.usuariosDao),
+    turnos: makeTurnoUseCases(daos.turnosDao, daos.usuariosDao),
+    usuarios: makeUsuarioUseCases(daos.usuariosDao, daos.turnosDao),
   };
 
   const controllers = {
