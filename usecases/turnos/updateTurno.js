@@ -1,9 +1,9 @@
 /**
- * Caso de uso: crear un turno.
- * El estado inicial lo fija el servidor, nunca el cliente.
+ * Caso de uso: actualizar un turno.
+ * Devuelve el turno actualizado o null si no existe.
  */
-async function createTurno(data, dao) {
-  return dao.save({ ...data, estado: "Esperando el servicio" });
+async function updateTurno(id, cambios, dao) {
+  return dao.update(id, cambios);
 }
 
-export default createTurno;
+export default updateTurno;

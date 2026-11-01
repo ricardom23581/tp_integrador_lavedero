@@ -1,7 +1,7 @@
 /**
  * Composition root: arma las dependencias de la app.
  * Cadena: DAO (elegido por la factory) → casos de uso → controller → router.
- * Acá ya no se decide qué persistencia usar: eso lo resuelve dao/daoFactory.js.
+ * Es async porque los DAOs de Sequelize necesitan init() (crear tablas y seed).
  */
 import { Router } from "express";
 import { getTurnosDao, getUsuariosDao } from "../dao/daoFactory.js";
@@ -12,11 +12,16 @@ import { makeUsuariosController } from "../controllers/usuariosController.js";
 import { crearTurnosRouter } from "../routes/turnosRoutes.js";
 import { crearUsuariosRouter } from "../routes/usuariosRoutes.js";
 
-export function crearContainer() {
+export async function crearContainer() {
   const daos = {
-    turnosDao: getTurnosDao(),
-    usuariosDao: getUsuariosDao(),
+    usuariosDao: await getUsuariosDao(),
+    turnosDao: await getTurnosDao(),
   };
+
+  // Los DAOs en memoria no tienen init(); los de Sequelize sí.
+  // Usuarios primero: los turnos dependen de ellos.
+  await daos.usuariosDao.init?.();
+  await daos.turnosDao.init?.();
 
   const useCases = {
     turnos: makeTurnoUseCases(daos.turnosDao, daos.usuariosDao),
