@@ -1,18 +1,25 @@
 /**
  * Composition root: arma las dependencias de la app.
- * Según PERSISTENCE_TYPE elige qué DAO inyectar, y devuelve el router principal.
+ * Cadena: DAO → casos de uso → controller → router.
+ * Según PERSISTENCE_TYPE elige qué DAOs inyectar, y devuelve el router principal.
  */
 import { Router } from "express";
 import config from "../config/config.js";
 import TurnosMemoryDao from "../dao/memory/TurnosMemoryDao.js";
-import { turnosSeed } from "../dao/memory/seed.js";
+import UsuariosMemoryDao from "../dao/memory/UsuariosMemoryDao.js";
+import { turnosSeed, usuariosSeed } from "../dao/memory/seed.js";
+import makeTurnoUseCases from "../usecases/turnos/makeTurnoUseCases.js";
+import makeUsuarioUseCases from "../usecases/usuarios/makeUsuarioUseCases.js";
 import { makeTurnosController } from "../controllers/turnosController.js";
+import { makeUsuariosController } from "../controllers/usuariosController.js";
 import { crearTurnosRouter } from "../routes/turnosRoutes.js";
+import { crearUsuariosRouter } from "../routes/usuariosRoutes.js";
 
 function crearDaos(tipo) {
   if (tipo === "memory") {
     return {
       turnosDao: new TurnosMemoryDao(turnosSeed),
+      usuariosDao: new UsuariosMemoryDao(usuariosSeed),
     };
   }
   if (tipo === "sequelize") {
@@ -24,12 +31,19 @@ function crearDaos(tipo) {
 export function crearContainer() {
   const daos = crearDaos(config.persistenceType);
 
+  const useCases = {
+    turnos: makeTurnoUseCases(daos.turnosDao),
+    usuarios: makeUsuarioUseCases(daos.usuariosDao),
+  };
+
   const controllers = {
-    turnos: makeTurnosController(daos.turnosDao),
+    turnos: makeTurnosController(useCases.turnos),
+    usuarios: makeUsuariosController(useCases.usuarios),
   };
 
   const router = Router();
   router.use("/turnos", crearTurnosRouter(controllers.turnos));
+  router.use("/usuarios", crearUsuariosRouter(controllers.usuarios));
 
-  return { daos, controllers, router };
+  return { daos, useCases, controllers, router };
 }
