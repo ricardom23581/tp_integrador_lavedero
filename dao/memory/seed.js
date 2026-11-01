@@ -1,6 +1,14 @@
 /**
  * Datos iniciales para la persistencia en memoria.
+ * Los ids los asigna el DAO en orden: el admin es el 1, así que los clientes
+ * son el 2 y el 3 (los mismos clienteId que usan los turnos).
  */
+export const usuariosSeed = [
+  { nombre: "Admin Lavadero", email: "admin@test.com", password: "123", rol: "admin" },
+  { nombre: "Juan Perez", email: "cliente@test.com", password: "123", rol: "user" },
+  { nombre: "María Gómez", email: "maria@test.com", password: "123", rol: "user" },
+];
+
 export const turnosSeed = [
   {
     clienteId: 2,

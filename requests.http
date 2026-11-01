@@ -117,3 +117,98 @@ Content-Type: application/json
   "estado": "En proceso de lavado",
   "clienteId": 7
 }
+
+### --- PASO 2: USUARIOS ---
+
+### Listar usuarios (3, sin password)
+GET {{base}}/api/usuarios
+
+### Solo clientes
+GET {{base}}/api/usuarios?rol=user
+
+### Obtener un usuario
+GET {{base}}/api/usuarios/2
+
+### Usuario inexistente (404)
+GET {{base}}/api/usuarios/999
+
+### Registrarse (201, rol user)
+POST {{base}}/api/usuarios
+Content-Type: application/json
+
+{
+  "nombre": "Ana Lopez",
+  "email": " ANA@test.com ",
+  "password": "123"
+}
+
+### Email repetido (409)
+POST {{base}}/api/usuarios
+Content-Type: application/json
+
+{
+  "nombre": "Otra Ana",
+  "email": "ana@test.com",
+  "password": "123"
+}
+
+### Datos inválidos (400)
+POST {{base}}/api/usuarios
+Content-Type: application/json
+
+{
+  "nombre": "",
+  "email": "no-es-un-mail"
+}
+
+### Editar nombre (200)
+PUT {{base}}/api/usuarios/2
+Content-Type: application/json
+
+{
+  "nombre": "Juan Pérez"
+}
+
+### Cambiar a un email que ya existe (409)
+PUT {{base}}/api/usuarios/2
+Content-Type: application/json
+
+{
+  "email": "maria@test.com"
+}
+
+### Eliminar usuario (204)
+DELETE {{base}}/api/usuarios/3
+
+### --- PASO 3: RELACIÓN TURNOS ↔ USUARIOS ---
+
+### Crear turno con usuario inexistente (404 USUARIO_NO_ENCONTRADO)
+POST {{base}}/api/turnos
+Content-Type: application/json
+
+{
+  "clienteId": 999,
+  "patente": "AC456BD",
+  "fecha": "2026-11-05T11:00",
+  "tipoVehiculo": "auto"
+}
+
+### Crear turno con usuario existente (201)
+POST {{base}}/api/turnos
+Content-Type: application/json
+
+{
+  "clienteId": 3,
+  "patente": "AC456BD",
+  "fecha": "2026-11-05T11:00",
+  "tipoVehiculo": "auto"
+}
+
+### Eliminar al admin (409 ADMIN_NO_ELIMINABLE)
+DELETE {{base}}/api/usuarios/1
+
+### Eliminar un cliente con turnos (204): sus turnos desaparecen
+DELETE {{base}}/api/usuarios/2
+
+### Ver que los turnos del cliente 2 ya no están
+GET {{base}}/api/turnos?clienteId=2
