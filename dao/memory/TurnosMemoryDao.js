@@ -38,4 +38,11 @@ export default class TurnosMemoryDao {
     this.#turnos.splice(index, 1);
     return true;
   }
+
+  // Borra todos los turnos de un cliente. Devuelve cuántos borró.
+  async deleteByClienteId(clienteId) {
+    const antes = this.#turnos.length;
+    this.#turnos = this.#turnos.filter((t) => t.clienteId !== clienteId);
+    return antes - this.#turnos.length;
+  }
 }

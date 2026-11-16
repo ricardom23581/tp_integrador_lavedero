@@ -10,7 +10,7 @@ import logger from "./middlewares/logger.js";
 import notFound from "./middlewares/notFound.js";
 import errorHandler from "./middlewares/errorHandler.js";
 
-const container = crearContainer();
+const container = await crearContainer();
 const app = express();
 
 app.use(logger); // 1º: loguea todo, incluso lo que después da error

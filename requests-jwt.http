@@ -1,0 +1,300 @@
+@base = http://localhost:3000
+
+### Login
+# @name login
+POST {{base}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@test.com",
+  "password": "123"
+}
+
+###
+@token = {{login.response.body.token}}
+
+
+### Health check
+GET {{base}}/health
+
+### Listar turnos
+GET {{base}}/api/turnos
+Authorization: Bearer {{token}}
+
+### Obtener un turno
+GET {{base}}/api/turnos/1
+Authorization: Bearer {{token}}
+
+### Turno inexistente (404)
+GET {{base}}/api/turnos/999
+Authorization: Bearer {{token}}
+
+### Crear turno (201)
+POST {{base}}/api/turnos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "clienteId": 2,
+  "patente": "AC456BD",
+  "fecha": "2026-11-04T11:15",
+  "tipoVehiculo": "moto"
+}
+
+### Crear turno con datos faltantes (400)
+POST {{base}}/api/turnos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "patente": "AC456BD"
+}
+
+### Actualizar estado (200)
+PUT {{base}}/api/turnos/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "estado": "En proceso de lavado"
+}
+
+### Eliminar turno (204)
+DELETE {{base}}/api/turnos/2
+Authorization: Bearer {{token}}
+
+### Filtrar por estado (los espacios van como %20)
+GET {{base}}/api/turnos?estado=Esperando%20el%20servicio
+Authorization: Bearer {{token}}
+
+### Turnos de un día
+GET {{base}}/api/turnos?fecha=2026-11-03
+Authorization: Bearer {{token}}
+
+### Turnos de un cliente, del más nuevo al más viejo
+GET {{base}}/api/turnos?clienteId=3&sort=-fecha
+Authorization: Bearer {{token}}
+
+### Paginación: página 2, de a 3 (mirá el header X-Total-Count)
+GET {{base}}/api/turnos?page=2&limit=3
+Authorization: Bearer {{token}}
+
+### Ruta inexistente (404 en JSON, ya no en HTML)
+GET {{base}}/api/clientes
+
+### --- CLASE 6: VALIDACIÓN Y ERRORES ---
+
+### Query inválida (400 con details)
+GET {{base}}/api/turnos?page=abc&limit=500&sort=precio&estado=x
+Authorization: Bearer {{token}}
+
+### Id no numérico (400)
+GET {{base}}/api/turnos/abc
+Authorization: Bearer {{token}}
+
+### Crear: patente en minúscula y con espacios, más campos que no van (201, limpia todo)
+POST {{base}}/api/turnos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "clienteId": 2,
+  "patente": " ac456bd ",
+  "fecha": "2026-11-04T11:15",
+  "tipoVehiculo": "moto",
+  "estado": "Lavado finalizado",
+  "id": 99
+}
+
+### Crear con todo mal (400 con un detail por campo)
+POST {{base}}/api/turnos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "clienteId": "dos",
+  "patente": "123",
+  "fecha": "mañana",
+  "tipoVehiculo": "bici"
+}
+
+### JSON mal formado (400 JSON_INVALIDO)
+POST {{base}}/api/turnos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{malformado
+
+### PUT vacío (400)
+PUT {{base}}/api/turnos/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{}
+
+### PUT con estado inválido (400)
+PUT {{base}}/api/turnos/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "estado": "Listo"
+}
+
+### PUT intentando cambiar el cliente (200, pero clienteId se ignora)
+PUT {{base}}/api/turnos/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "estado": "En proceso de lavado",
+  "clienteId": 7
+}
+
+### --- PASO 2: USUARIOS ---
+
+### Listar usuarios (3, sin password)
+GET {{base}}/api/usuarios
+Authorization: Bearer {{token}}
+
+### Solo clientes
+GET {{base}}/api/usuarios?rol=user
+Authorization: Bearer {{token}}
+
+### Obtener un usuario
+GET {{base}}/api/usuarios/2
+Authorization: Bearer {{token}}
+
+### Usuario inexistente (404)
+GET {{base}}/api/usuarios/999
+Authorization: Bearer {{token}}
+
+### Registrarse (201, rol user)
+POST {{base}}/api/usuarios
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nombre": "Ana Lopez",
+  "email": " ANA@test.com ",
+  "password": "123"
+}
+
+### Email repetido (409)
+POST {{base}}/api/usuarios
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nombre": "Otra Ana",
+  "email": "ana@test.com",
+  "password": "123"
+}
+
+### Datos inválidos (400)
+POST {{base}}/api/usuarios
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nombre": "",
+  "email": "no-es-un-mail"
+}
+
+### Editar nombre (200)
+PUT {{base}}/api/usuarios/2
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nombre": "Juan Pérez"
+}
+
+### Cambiar a un email que ya existe (409)
+PUT {{base}}/api/usuarios/2
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "maria@test.com"
+}
+
+### Eliminar usuario (204)
+DELETE {{base}}/api/usuarios/3
+Authorization: Bearer {{token}}
+
+### --- PASO 3: RELACIÓN TURNOS ↔ USUARIOS ---
+
+### Crear turno con usuario inexistente (404 USUARIO_NO_ENCONTRADO)
+POST {{base}}/api/turnos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "clienteId": 999,
+  "patente": "AC456BD",
+  "fecha": "2026-11-05T11:00",
+  "tipoVehiculo": "auto"
+}
+
+### Crear turno con usuario existente (201)
+POST {{base}}/api/turnos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "clienteId": 3,
+  "patente": "AC456BD",
+  "fecha": "2026-11-05T11:00",
+  "tipoVehiculo": "auto"
+}
+
+### Eliminar al admin (409 ADMIN_NO_ELIMINABLE)
+DELETE {{base}}/api/usuarios/1
+Authorization: Bearer {{token}}
+
+### Eliminar un cliente con turnos (204): sus turnos desaparecen
+DELETE {{base}}/api/usuarios/2
+Authorization: Bearer {{token}}
+
+### Ver que los turnos del cliente 2 ya no están
+GET {{base}}/api/turnos?clienteId=2
+Authorization: Bearer {{token}}
+
+
+### --- AUTH (JWT) ---
+
+### Registro público (201, siempre rol user) — no lleva token
+POST {{base}}/api/auth/register
+Content-Type: application/json
+
+{
+  "nombre": "Pedro Gomez",
+  "email": "pedro@test.com",
+  "password": "123456"
+}
+
+### Quién soy (el dueño del token)
+GET {{base}}/api/auth/me
+Authorization: Bearer {{token}}
+
+### Sin token (401 TOKEN_FALTANTE)
+GET {{base}}/api/turnos
+
+### Token inválido (401)
+GET {{base}}/api/turnos
+Authorization: Bearer token-trucho
+
+### Login como cliente (rol user)
+# @name loginCliente
+POST {{base}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "cliente@test.com",
+  "password": "123"
+}
+
+### Cliente intenta listar usuarios (403 PROHIBIDO: es solo admin)
+GET {{base}}/api/usuarios
+Authorization: Bearer {{loginCliente.response.body.token}}
