@@ -1,4 +1,8 @@
 @base = http://localhost:3000
+# Usuarios al arrancar: Juan (id 1, cliente@test.com / cliente1234),
+# María (id 2, maria@test.com / maria1234) y el admin (id 3, sale del .env).
+# Ejecutar de arriba hacia abajo. Para empezar de cero, reiniciá el server
+# (en modo sequelize, además, borrá la carpeta data).
 
 ### Login
 # @name login
@@ -6,8 +10,8 @@ POST {{base}}/api/auth/login
 Content-Type: application/json
 
 {
-  "email": "admin@test.com",
-  "password": "123"
+  "email": "{{$dotenv ADMIN_EMAIL}}",
+  "password": "{{$dotenv ADMIN_PASSWORD}}"
 }
 
 ###
@@ -35,7 +39,7 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "clienteId": 2,
+  "clienteId": 1,
   "patente": "AC456BD",
   "fecha": "2026-11-04T11:15",
   "tipoVehiculo": "moto"
@@ -72,7 +76,7 @@ GET {{base}}/api/turnos?fecha=2026-11-03
 Authorization: Bearer {{token}}
 
 ### Turnos de un cliente, del más nuevo al más viejo
-GET {{base}}/api/turnos?clienteId=3&sort=-fecha
+GET {{base}}/api/turnos?clienteId=2&sort=-fecha
 Authorization: Bearer {{token}}
 
 ### Paginación: página 2, de a 3 (mirá el header X-Total-Count)
@@ -98,7 +102,7 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "clienteId": 2,
+  "clienteId": 1,
   "patente": " ac456bd ",
   "fecha": "2026-11-04T11:15",
   "tipoVehiculo": "moto",
@@ -153,7 +157,7 @@ Content-Type: application/json
 
 ### --- PASO 2: USUARIOS ---
 
-### Listar usuarios (3, sin password)
+### Listar usuarios (3, ninguno trae passwordHash)
 GET {{base}}/api/usuarios
 Authorization: Bearer {{token}}
 
@@ -162,14 +166,14 @@ GET {{base}}/api/usuarios?rol=user
 Authorization: Bearer {{token}}
 
 ### Obtener un usuario
-GET {{base}}/api/usuarios/2
+GET {{base}}/api/usuarios/1
 Authorization: Bearer {{token}}
 
 ### Usuario inexistente (404)
 GET {{base}}/api/usuarios/999
 Authorization: Bearer {{token}}
 
-### Registrarse (201, rol user)
+### Alta de usuario por el admin (201, rol user) — Ana queda con id 4
 POST {{base}}/api/usuarios
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -177,7 +181,7 @@ Content-Type: application/json
 {
   "nombre": "Ana Lopez",
   "email": " ANA@test.com ",
-  "password": "123"
+  "password": "ana12345"
 }
 
 ### Email repetido (409)
@@ -188,7 +192,7 @@ Content-Type: application/json
 {
   "nombre": "Otra Ana",
   "email": "ana@test.com",
-  "password": "123"
+  "password": "ana12345"
 }
 
 ### Datos inválidos (400)
@@ -202,7 +206,7 @@ Content-Type: application/json
 }
 
 ### Editar nombre (200)
-PUT {{base}}/api/usuarios/2
+PUT {{base}}/api/usuarios/1
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
@@ -211,7 +215,7 @@ Content-Type: application/json
 }
 
 ### Cambiar a un email que ya existe (409)
-PUT {{base}}/api/usuarios/2
+PUT {{base}}/api/usuarios/1
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
@@ -219,8 +223,8 @@ Content-Type: application/json
   "email": "maria@test.com"
 }
 
-### Eliminar usuario (204)
-DELETE {{base}}/api/usuarios/3
+### Eliminar usuario (204) — borra a Ana
+DELETE {{base}}/api/usuarios/4
 Authorization: Bearer {{token}}
 
 ### --- PASO 3: RELACIÓN TURNOS ↔ USUARIOS ---
@@ -243,22 +247,22 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "clienteId": 3,
+  "clienteId": 2,
   "patente": "AC456BD",
   "fecha": "2026-11-05T11:00",
   "tipoVehiculo": "auto"
 }
 
 ### Eliminar al admin (409 ADMIN_NO_ELIMINABLE)
+DELETE {{base}}/api/usuarios/3
+Authorization: Bearer {{token}}
+
+### Eliminar un cliente con turnos (204): sus turnos desaparecen — borra a Juan
 DELETE {{base}}/api/usuarios/1
 Authorization: Bearer {{token}}
 
-### Eliminar un cliente con turnos (204): sus turnos desaparecen
-DELETE {{base}}/api/usuarios/2
-Authorization: Bearer {{token}}
-
-### Ver que los turnos del cliente 2 ya no están
-GET {{base}}/api/turnos?clienteId=2
+### Ver que los turnos del cliente 1 ya no están (200, lista vacía)
+GET {{base}}/api/turnos?clienteId=1
 Authorization: Bearer {{token}}
 
 
@@ -271,7 +275,7 @@ Content-Type: application/json
 {
   "nombre": "Pedro Gomez",
   "email": "pedro@test.com",
-  "password": "123456"
+  "password": "pedro12345"
 }
 
 ### Quién soy (el dueño del token)
@@ -285,16 +289,44 @@ GET {{base}}/api/turnos
 GET {{base}}/api/turnos
 Authorization: Bearer token-trucho
 
-### Login como cliente (rol user)
+### Login como cliente María (rol user; Juan ya fue eliminado más arriba)
 # @name loginCliente
 POST {{base}}/api/auth/login
 Content-Type: application/json
 
 {
-  "email": "cliente@test.com",
-  "password": "123"
+  "email": "maria@test.com",
+  "password": "maria1234"
 }
 
 ### Cliente intenta listar usuarios (403 PROHIBIDO: es solo admin)
 GET {{base}}/api/usuarios
 Authorization: Bearer {{loginCliente.response.body.token}}
+
+### Cliente ve solo sus turnos (200, todos con clienteId 2)
+GET {{base}}/api/turnos
+Authorization: Bearer {{loginCliente.response.body.token}}
+
+### Cliente pide turnos de otro (403 PROHIBIDO)
+GET {{base}}/api/turnos?clienteId=1
+Authorization: Bearer {{loginCliente.response.body.token}}
+
+### Cliente saca un turno sin clienteId: queda a su nombre (201, clienteId 2)
+POST {{base}}/api/turnos
+Authorization: Bearer {{loginCliente.response.body.token}}
+Content-Type: application/json
+
+{
+  "patente": "AB123CD",
+  "fecha": "2026-11-20T10:00",
+  "tipoVehiculo": "auto"
+}
+
+### Cliente intenta cambiar el estado (403: PUT es solo admin)
+PUT {{base}}/api/turnos/1
+Authorization: Bearer {{loginCliente.response.body.token}}
+Content-Type: application/json
+
+{
+  "estado": "Lavado finalizado"
+}
