@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import loginUsuario from "./loginUsuario.js";
-import createUsuario from "../usuarios/createUsuario.js";
+import registerUsuario from "./registerUsuario.js";
+import cambiarPassword from "./cambiarPassword.js";
 import getUsuarioById from "../usuarios/getUsuarioById.js";
 
 /**
@@ -13,9 +14,9 @@ function makeAuthUseCases(usuariosDao, hasher, tokens) {
   const hashFalso = hasher.hash(randomBytes(16).toString("hex"));
 
   return {
-    // Autoregistro público: reutiliza createUsuario (email duplicado, hash y rol "user" forzado).
-    register: (data) => createUsuario(data, usuariosDao, hasher),
+    register: (data) => registerUsuario(data, usuariosDao, hasher),
     login: (credenciales) => loginUsuario(credenciales, usuariosDao, hasher, tokens, hashFalso),
+    cambiarPassword: (id, data) => cambiarPassword(id, data, usuariosDao, hasher),
     // Perfil del usuario autenticado: devuelve el usuario sin hash, o null si ya no existe.
     getPerfil: (id) => getUsuarioById(id, usuariosDao),
   };

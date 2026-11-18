@@ -22,6 +22,8 @@ import { crearTurnosRouter } from "../routes/turnosRoutes.js";
 import { crearUsuariosRouter } from "../routes/usuariosRoutes.js";
 import { crearAuthRouter } from "../routes/authRoutes.js";
 
+import seedAdmin from "../usecases/auth/seedAdmin.js";
+
 export async function crearContainer() {
   // Seguridad: el hasher se crea primero porque el seed de usuarios necesita guardar hashes.
   const hasher = makePasswordHasher({ rounds: config.bcryptRounds });
@@ -37,6 +39,7 @@ export async function crearContainer() {
   // Usuarios primero: los turnos dependen de ellos.
   await daos.usuariosDao.init?.();
   await daos.turnosDao.init?.();
+  await seedAdmin(config.admin, daos.usuariosDao, hasher);
 
   // Eventos: el bus conecta a quien emite (casos de uso) con quien escucha (listeners).
   // Los listeners se registran ANTES de recibir requests para no perder ningún evento.
@@ -57,9 +60,11 @@ export async function crearContainer() {
   };
 
   const router = Router();
-  router.use("/auth", crearAuthRouter(controllers.auth, auth));
+  router.use("/auth", crearAuthRouter(controllers.auth, auth, config.loginRateLimitMax));
   router.use("/turnos", crearTurnosRouter(controllers.turnos, auth));
   router.use("/usuarios", crearUsuariosRouter(controllers.usuarios, auth));
 
   return { daos, events, useCases, controllers, router };
 }
+
+

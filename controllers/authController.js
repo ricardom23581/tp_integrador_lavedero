@@ -25,6 +25,12 @@ export function makeAuthController(useCases) {
     }
     res.status(200).json(usuario);
   };
-
-  return { register, login, me };
+  
+  // PUT /api/auth/password → 204 sin body
+  const cambiarPassword = async (req, res) => {
+    await useCases.cambiarPassword(req.user.id, req.body);
+    res.status(204).end();
+  };
+  
+  return { register, login, me, cambiarPassword };
 }

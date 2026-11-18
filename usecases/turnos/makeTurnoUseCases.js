@@ -10,9 +10,9 @@ import deleteTurno from "./deleteTurno.js";
  */
 function makeTurnoUseCases(dao, usuariosDao, events) {
   return {
-    getTurnos: (filters) => getTurnos(filters, dao),
-    getTurnoById: (id) => getTurnoById(id, dao),
-    createTurno: (data) => createTurno(data, dao, usuariosDao, events),
+    getTurnos: (filters, actor) => getTurnos(filters, actor, dao),
+    getTurnoById: (id, actor) => getTurnoById(id, actor, dao),
+    createTurno: (data, actor) => createTurno(data, actor, dao, usuariosDao, events),
     updateTurno: (id, cambios) => updateTurno(id, cambios, dao, events),
     deleteTurno: (id) => deleteTurno(id, dao),
   };

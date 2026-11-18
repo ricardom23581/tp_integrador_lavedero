@@ -48,7 +48,7 @@ const campos = {
 
 // POST /api/turnos — el estado no viene del cliente: lo fija el servidor
 export const crearTurnoSchema = z.object({
-  clienteId: campos.clienteId,
+  clienteId: campos.clienteId.optional(),
   patente: campos.patente,
   fecha: campos.fecha,
   tipoVehiculo: campos.tipoVehiculo,
@@ -99,3 +99,4 @@ export const listarTurnosQuerySchema = z.object({
     .max(100, "limit no puede superar 100")
     .default(20),
 });
+

@@ -23,8 +23,17 @@ const config = {
     expiresIn: process.env.JWT_EXPIRES_IN || "1h", // vida del token: "15m", "1h", "7d"
   },
   
-  bcryptRounds: Number(process.env.BCRYPT_ROUNDS) || 10, // costo del hash: cada +1 duplica el tiempo
-  
+    bcryptRounds: Number(process.env.BCRYPT_ROUNDS) || 10, // costo del hash: cada +1 duplica el tiempo
+
+  // Máximo de intentos de login FALLIDOS por IP y por minuto (los exitosos no cuentan)
+  loginRateLimitMax: Number(process.env.LOGIN_RATE_LIMIT_MAX) || 5,
+
+  // Administrador inicial: se siembra al arrancar si no existe. Sin ADMIN_PASSWORD no se crea.
+  admin: {
+    email: process.env.ADMIN_EMAIL || "admin@lavadero.com",
+    password: process.env.ADMIN_PASSWORD,
+  },
+
   // Notificador de eventos: console | file
   notifier: {
     type: process.env.NOTIFIER_TYPE || "console",

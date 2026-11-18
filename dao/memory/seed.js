@@ -1,12 +1,13 @@
 /**
- * Datos iniciales para la persistencia en memoria.
- * Los ids los asigna el DAO en orden: el admin es el 1, así que los clientes
- * son el 2 y el 3 (los mismos clienteId que usan los turnos).
+ * Datos iniciales de ejemplo (memoria y Sequelize).
+ * Solo clientes: el administrador NO está acá, lo crea seedAdmin desde el contenedor
+ * con ADMIN_EMAIL y ADMIN_PASSWORD del .env (así su contraseña no queda escrita en git).
+ * Los ids los asigna el DAO en orden: Juan es el 1 y María la 2 (los clienteId de los turnos).
+ * Las contraseñas cumplen la misma regla que el registro (8 a 72 caracteres).
  */
 export const usuariosSeed = [
-  { nombre: "Admin Lavadero", email: "admin@test.com", password: "123", rol: "admin" },
-  { nombre: "Juan Perez", email: "cliente@test.com", password: "123", rol: "user" },
-  { nombre: "María Gómez", email: "maria@test.com", password: "123", rol: "user" },
+  { nombre: "Juan Perez", email: "cliente@test.com", password: "cliente1234", rol: "user" },
+  { nombre: "María Gómez", email: "maria@test.com", password: "maria1234", rol: "user" },
 ];
 
 /**

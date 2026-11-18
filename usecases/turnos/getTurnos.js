@@ -1,9 +1,21 @@
+import AppError from "../../errors/AppError.js";
+
 /**
  * Caso de uso: listar turnos con filtros, orden y paginación.
  * Recibe los filtros ya validados por Zod y el dao por parámetro (inversión de dependencias).
  * Devuelve { items, total }: total es la cantidad antes de paginar (para X-Total-Count).
+ *
+ * Regla de acceso: un cliente (rol "user") siempre ve solo sus turnos; si pide los de otro
+ * cliente con ?clienteId=, recibe 403. El admin ve todos y puede filtrar por cualquier cliente.
  */
-async function getTurnos(filters, dao) {
+async function getTurnos(filters, actor, dao) {
+  if (actor.rol !== "admin") {
+    if (filters.clienteId !== undefined && filters.clienteId !== actor.id) {
+      throw new AppError("PROHIBIDO", "No tenés permiso para ver turnos de otros clientes", 403);
+    }
+    filters = { ...filters, clienteId: actor.id };
+  }
+
   const { estado, tipoVehiculo, clienteId, fecha, patente, sort, page, limit } = filters;
 
   let turnos = await dao.getAll();

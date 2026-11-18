@@ -22,3 +22,16 @@ export const loginSchema = z.object({
     .string({ error: "La contraseña es obligatoria" })
     .min(1, "La contraseña es obligatoria"),
 });
+
+// PUT /api/auth/password — la nueva cumple las mismas reglas que al registrarse
+export const cambiarPasswordSchema = z
+  .object({
+    passwordActual: z
+      .string({ error: "La contraseña actual es obligatoria" })
+      .min(1, "La contraseña actual es obligatoria"),
+    passwordNueva: crearUsuarioSchema.shape.password,
+  })
+  .refine((d) => d.passwordActual !== d.passwordNueva, {
+    message: "La contraseña nueva tiene que ser distinta de la actual",
+    path: ["passwordNueva"],
+  });

@@ -23,8 +23,10 @@ export function makeTokenService({ secret, expiresIn }) {
         if (err.name === "TokenExpiredError") {
           throw new AppError("TOKEN_VENCIDO", "El token venció, iniciá sesión de nuevo", 401);
         }
-        throw new AppError("TOKEN_INVALID", "Token inválido", 401);
+        throw new AppError("TOKEN_INVALIDO", "Token inválido", 401);
       }
     },
   };
 }
+
+   
