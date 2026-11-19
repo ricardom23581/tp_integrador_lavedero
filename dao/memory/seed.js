@@ -23,13 +23,17 @@ export async function usuariosSeedConHash(hasher) {
   );
 }
 
+// Clase 13: los turnos de ejemplo son de días que ya pasaron. Si quedaran "Esperando el servicio", serían
+// AUSENTES (situación calculada) y la regla R3 no dejaría a Juan ni a María sacar turnos nuevos.
+// Por eso los dos que estaban esperando pasan a "Lavado finalizado". Para ver un ausente, se usa CLOCK_NOW.
+
 export const turnosSeed = [
   {
     clienteId: 1,
     patente: "ABC123",
     fecha: "2026-11-03T09:00",
     tipoVehiculo: "auto",
-    estado: "Esperando el servicio",
+    estado: "Lavado finalizado",
   },
   {
     clienteId: 1,
@@ -50,6 +54,6 @@ export const turnosSeed = [
     patente: "XYZ789",
     fecha: "2026-11-02T16:45",
     tipoVehiculo: "auto",
-    estado: "Esperando el servicio",
+    estado: "Lavado finalizado",
   },
 ];

@@ -10,13 +10,15 @@ import getTurnoById from "./getTurnoById.js";
 
 /**
  * Caso de uso: detalle de un turno + si su día es feriado (consultando el calendario externo).
- * Reutiliza getTurnoById, así se respetan las mismas reglas de acceso (un cliente solo ve lo suyo).
+ * Reutiliza getTurnoById, así se respetan las mismas reglas de acceso (un cliente solo ve lo suyo)
+ * y el turno ya viene con su situación calculada (Clase 13).
  * Devuelve el turno con { feriado, calendarioStatus } o null si no existe.
  *   calendarioStatus: "feriado" | "habil" | "unavailable"
  * Regla: el calendario es un EXTRA. Si no responde, el turno igual se devuelve (degradación elegante).
  */
-async function getTurnoDetalle(id, actor, dao, calendario) {
-  const turno = await getTurnoById(id, actor, dao);
+async function getTurnoDetalle(id, actor, deps) {
+  const { calendario } = deps;
+  const turno = await getTurnoById(id, actor, deps);
   if (!turno) return null;
 
   try {

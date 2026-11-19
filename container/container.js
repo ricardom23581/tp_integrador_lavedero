@@ -28,6 +28,9 @@ import { getCalendario } from "../gateways/calendarioFactory.js";
 import makeFeriadoUseCases from "../usecases/feriados/makeFeriadoUseCases.js";
 import { makeFeriadosController } from "../controllers/feriadosController.js";
 import { crearFeriadosRouter } from "../routes/feriadosRoutes.js";
+// Clase 13: reloj inyectable y caché de feriados para las reglas de turnos
+import { createClock } from "../utils/clock.js";
+import { conCachePorAnio } from "../gateways/calendarioConCache.js";
 
 export async function crearContainer() {
   // Seguridad: el hasher se crea primero porque el seed de usuarios necesita guardar hashes.
@@ -55,8 +58,22 @@ export async function crearContainer() {
     // Calendario de feriados: real (ArgentinaDatos) o falso según config. Se crea UNA sola vez
   // y se comparte entre turnos y feriados. Timeout y concurrencia llegan por inyección.
   const calendario = getCalendario(config.calendario);
+
+  // Clase 13: reloj (real o fijo para "viajar en el tiempo") y calendario CON caché para las reglas de turnos.
+  // /api/feriados/verificar sigue usando el calendario SIN caché (para comparar los modos de la clase 12).
+  const clock = createClock({ fixedNow: config.clockNow });
+  if (config.clockNow) console.log(`[Reloj] Fijo en ${config.clockNow} (ahora en el lavadero = ${clock.ahora()})`);
+  const calendarioConCache = conCachePorAnio(calendario);
+
   const useCases = {
-    turnos: makeTurnoUseCases(daos.turnosDao, daos.usuariosDao, events, calendario),
+    turnos: makeTurnoUseCases({
+      turnosDao: daos.turnosDao,
+      usuariosDao: daos.usuariosDao,
+      events,
+      calendario: calendarioConCache,
+      clock,
+      reglas: config.reglas,
+    }),
     usuarios: makeUsuarioUseCases(daos.usuariosDao, daos.turnosDao, hasher),
     auth: makeAuthUseCases(daos.usuariosDao, hasher, tokens),
     feriados: makeFeriadoUseCases(calendario, { concurrency: config.calendario.concurrency }),
@@ -77,5 +94,3 @@ export async function crearContainer() {
 
   return { daos, events, useCases, controllers, router };
 }
-
-

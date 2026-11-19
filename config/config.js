@@ -36,12 +36,23 @@ const config = {
 
     // Calendario de feriados (Clase 12): API externa (ArgentinaDatos) o uno falso para trabajar sin red
   calendario: {
-    type: process.env.CALENDARIO_TYPE || "argentinadatos", // "argentinadatos" o "fake"
+    type: process.env.CALENDARIO_TYPE || "argentinadatos", // "argentinadatos", "fake" o "fake-down" (Clase 13: simula la API caída)
     baseUrl: process.env.FERIADOS_API_URL || "https://api.argentinadatos.com",
     timeoutMs: Number(process.env.EXTERNAL_TIMEOUT_MS) || 5000, // espera máxima por pedido externo
     concurrency: Number(process.env.EXTERNAL_CONCURRENCY) || 3, // pedidos externos simultáneos (modo "limited")
     fakeLatencyMs: Number(process.env.FAKE_LATENCY_MS) || 300, // demora simulada por pedido del calendario fake
   },
+
+  // Reglas de negocio de turnos (Clase 13). Los números de las reglas son CONFIGURACIÓN, no código:
+  // si el lavadero decide que el tope es 5, se cambia una variable de entorno sin tocar los casos de uso.
+  reglas: {
+    maxPendientes: Number(process.env.TURNOS_MAX_PENDIENTES) || 3, // R1: turnos pendientes por cliente
+    diasHabilesAnticipacion: Number(process.env.TURNOS_DIAS_HABILES_ANTICIPACION) || 30, // R2: hasta cuándo se puede reservar
+    maxReprogramaciones: Number(process.env.TURNOS_MAX_REPROGRAMACIONES ?? 1), // R4: reprogramaciones por turno
+  },
+
+  // Reloj fijo para "viajar en el tiempo" al probar a mano (ej. 2026-12-01T12:00:00Z). Vacío = hora real.
+  clockNow: process.env.CLOCK_NOW || undefined,
 
   // Notificador de eventos: console | file
   notifier: {

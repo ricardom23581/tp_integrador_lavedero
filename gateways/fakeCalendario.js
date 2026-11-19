@@ -21,11 +21,13 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * Cada "pedido" tarda `latencyMs` (como un pedido HTTP real), así se nota la diferencia entre
  * pedir de a uno, en paralelo o agrupado, incluso sin internet.
  * El año 1999 simula una falla del servidor externo (para probar los errores).
+ * Clase 13: con `fail: true` TODOS los pedidos fallan, como si la API estuviera caída (CALENDARIO_TYPE=fake-down),
+ * para probar la degradación elegante de las reglas de turnos.
  */
-function createFakeCalendario({ latencyMs }) {
+function createFakeCalendario({ latencyMs, fail = false }) {
   async function fetchAnio(anio) {
     await sleep(latencyMs);
-    if (String(anio) === "1999") {
+    if (fail || String(anio) === "1999") {
       throw new AppError("EXTERNAL_API_ERROR", "El calendario de feriados respondió 500", 502);
     }
     return FERIADOS_FAKE.filter((f) => f.fecha.startsWith(`${anio}-`));

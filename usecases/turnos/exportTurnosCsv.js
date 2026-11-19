@@ -8,6 +8,7 @@ const COLUMNAS = [
   { header: "patente", value: (t) => t.patente },
   { header: "tipo_vehiculo", value: (t) => t.tipoVehiculo },
   { header: "estado", value: (t) => t.estado },
+  { header: "situacion", value: (t) => t.situacion }, // Clase 13: calculada (pendiente / ausente / ...)
   { header: "cliente", value: (t) => t.cliente?.nombre },
   { header: "email", value: (t) => t.cliente?.email },
 ];
@@ -22,7 +23,7 @@ const COLUMNAS_ENRIQUECIDAS = [{ header: "feriado", value: (t) => t.feriado?.nom
  * y se informa en `enrichment`.
  * Devuelve { csv, filename, enrichment: "skipped" | "ok" | "unavailable" }.
  */
-async function exportTurnosCsv({ enriquecer, separador = ",", ...filtros }, actor, getTurnos, usuariosDao, calendario) {
+async function exportTurnosCsv({ enriquecer, separador = ",", ...filtros }, actor, getTurnos, { usuariosDao, calendario, clock }) {
   const { items: turnos } = await getTurnos(filtros, actor);
 
   // Nombre y email del cliente: una sola lectura de usuarios para todo el archivo
@@ -51,7 +52,8 @@ async function exportTurnosCsv({ enriquecer, separador = ",", ...filtros }, acto
 
   return {
     csv: toCsv(filas, columnas, { separator: separador }),
-    filename: `turnos-${new Date().toISOString().slice(0, 10)}.csv`,
+    // Clase 13: el día sale del reloj inyectado (en hora del lavadero), no de new Date() en UTC
+    filename: `turnos-${clock.hoy()}.csv`,
     enrichment,
   };
 }

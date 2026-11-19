@@ -3,6 +3,7 @@
  * Si algo falla en el camino, el controller nunca se ejecuta.
  *
  * Acceso: todo exige estar autenticado; modificar o eliminar un turno es solo de admin.
+ * Reprogramar (Clase 13) lo puede hacer el dueño del turno o el admin: eso lo decide el caso de uso.
  */
 import { Router } from "express";
 import validate from "../middlewares/validate.js";
@@ -12,6 +13,7 @@ import {
   idParamSchema,
   listarTurnosQuerySchema,
   exportarTurnosQuerySchema,
+  reprogramarTurnoSchema,
 } from "../schemas/turnoSchema.js";
 
 export function crearTurnosRouter(controller, { authenticate, authorize }) {
@@ -34,6 +36,12 @@ export function crearTurnosRouter(controller, { authenticate, authorize }) {
   router.get("/:id/detalle", validate(idParamSchema, "params"), controller.detalle);
   router.get("/:id", validate(idParamSchema, "params"), controller.obtener);
   router.post("/", validate(crearTurnoSchema), controller.crear);
+  router.put(
+    "/:id/reprogramar",
+    validate(idParamSchema, "params"),
+    validate(reprogramarTurnoSchema),
+    controller.reprogramar
+  );
   router.put(
     "/:id",
     authorize("admin"),

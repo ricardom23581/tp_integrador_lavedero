@@ -1,0 +1,253 @@
+### =====================================================================
+### Clase 13 — Reglas de negocio, validaciones cruzadas, reloj y status codes
+### Ejecutar en orden. El título dice el código esperado.
+### Arrancar con PERSISTENCE_TYPE=sequelize y CALENDARIO_TYPE=fake (borrar antes la carpeta data/).
+### Las fechas de los turnos son de diciembre de 2026: si ya pasaron, poné CLOCK_NOW=2026-11-19T12:00:00Z en el .env.
+### Reglas: R1 máx. 3 turnos pendientes · R2 hasta 30 días hábiles de anticipación · R3 con un turno ausente no se
+###         saca otro · R4 una sola reprogramación · R5 horario 08:00 a 16:45 cada 15 minutos.
+### Feriados del calendario fake que se usan: 2026-12-08 y 2026-12-25.
+### =====================================================================
+@base = http://localhost:3000/api
+
+### T0 - Login admin (200)
+# @name loginAdmin
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "email": "{{$dotenv ADMIN_EMAIL}}", "password": "{{$dotenv ADMIN_PASSWORD}}" }
+
+###
+@tokenAdmin = {{loginAdmin.response.body.token}}
+
+### T0b - Login Juan, id 1 (200)
+# @name loginJuan
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "email": "cliente@test.com", "password": "cliente1234" }
+
+###
+@tokenJuan = {{loginJuan.response.body.token}}
+
+### T0c - Login María, id 2 (200)
+# @name loginMaria
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "email": "maria@test.com", "password": "maria1234" }
+
+###
+@tokenMaria = {{loginMaria.response.body.token}}
+
+### ---------- R5: horario de atención (validación de FORMA, 400) ----------
+
+### T1 - Antes de abrir: 07:45 (400 VALIDACION)
+POST {{base}}/turnos
+Authorization: Bearer {{tokenJuan}}
+Content-Type: application/json
+
+{ "patente": "AC456BD", "fecha": "2026-12-02T07:45", "tipoVehiculo": "auto" }
+
+### T2 - Fuera de la grilla de 15 minutos: 10:10 (400 VALIDACION)
+POST {{base}}/turnos
+Authorization: Bearer {{tokenJuan}}
+Content-Type: application/json
+
+{ "patente": "AC456BD", "fecha": "2026-12-02T10:10", "tipoVehiculo": "auto" }
+
+### T3 - Fecha con buen formato pero inexistente: 30 de febrero (400 VALIDACION "La fecha no existe")
+POST {{base}}/turnos
+Authorization: Bearer {{tokenJuan}}
+Content-Type: application/json
+
+{ "patente": "AC456BD", "fecha": "2026-02-30T10:00", "tipoVehiculo": "auto" }
+
+### ---------- Reglas de fecha (422): pasada, fuera de rango (R2) y feriado ----------
+
+### T4 - Fecha que ya pasó (422 FECHA_PASADA)
+POST {{base}}/turnos
+Authorization: Bearer {{tokenJuan}}
+Content-Type: application/json
+
+{ "patente": "AC456BD", "fecha": "2026-11-10T10:00", "tipoVehiculo": "auto" }
+
+### T5 - R2: más allá de los 30 días hábiles (422 FECHA_FUERA_DE_RANGO, el mensaje dice hasta qué día)
+POST {{base}}/turnos
+Authorization: Bearer {{tokenJuan}}
+Content-Type: application/json
+
+{ "patente": "AC456BD", "fecha": "2027-03-01T10:00", "tipoVehiculo": "auto" }
+
+### T6 - Feriado (422 FECHA_FERIADO)
+POST {{base}}/turnos
+Authorization: Bearer {{tokenJuan}}
+Content-Type: application/json
+
+{ "patente": "AC456BD", "fecha": "2026-12-08T10:00", "tipoVehiculo": "auto" }
+
+### ---------- R1: máximo 3 turnos pendientes ----------
+
+### T7 - Juan saca el turno A (201). Mirá el header Location, situacion "pendiente" y feriadosDisponibles
+# @name turnoA
+POST {{base}}/turnos
+Authorization: Bearer {{tokenJuan}}
+Content-Type: application/json
+
+{ "patente": "AC456BD", "fecha": "2026-12-02T10:00", "tipoVehiculo": "auto" }
+
+### T8 - Otro turno pendiente para la MISMA patente (409 PATENTE_CON_TURNO_PENDIENTE)
+POST {{base}}/turnos
+Authorization: Bearer {{tokenJuan}}
+Content-Type: application/json
+
+{ "patente": "AC456BD", "fecha": "2026-12-03T10:00", "tipoVehiculo": "auto" }
+
+### T9 - Turno B (201, segundo pendiente)
+# @name turnoB
+POST {{base}}/turnos
+Authorization: Bearer {{tokenJuan}}
+Content-Type: application/json
+
+{ "patente": "AD111AA", "fecha": "2026-12-03T10:00", "tipoVehiculo": "moto" }
+
+### T10 - R1 borde: turno C (201, tercer pendiente: justo el límite)
+# @name turnoC
+POST {{base}}/turnos
+Authorization: Bearer {{tokenJuan}}
+Content-Type: application/json
+
+{ "patente": "AE222BB", "fecha": "2026-12-04T11:30", "tipoVehiculo": "camioneta" }
+
+### T11 - R1 violada: cuarto pendiente (409 LIMITE_TURNOS_PENDIENTES)
+POST {{base}}/turnos
+Authorization: Bearer {{tokenJuan}}
+Content-Type: application/json
+
+{ "patente": "AF333CC", "fecha": "2026-12-04T12:00", "tipoVehiculo": "auto" }
+
+### T12 - Tras el rechazo, el estado NO cambió: Juan sigue con 3 pendientes (header X-Total-Count: 3)
+GET {{base}}/turnos?clienteId=1&estado=Esperando%20el%20servicio
+Authorization: Bearer {{tokenAdmin}}
+
+### ---------- R4: reprogramar una sola vez ----------
+
+### T13 - Reprogramar el turno A (200, reprogramaciones: 1)
+PUT {{base}}/turnos/{{turnoA.response.body.id}}/reprogramar
+Authorization: Bearer {{tokenJuan}}
+Content-Type: application/json
+
+{ "fecha": "2026-12-09T09:00" }
+
+### T14 - Reprogramarlo otra vez (409 LIMITE_REPROGRAMACIONES)
+PUT {{base}}/turnos/{{turnoA.response.body.id}}/reprogramar
+Authorization: Bearer {{tokenJuan}}
+Content-Type: application/json
+
+{ "fecha": "2026-12-10T09:00" }
+
+### T15 - María intenta reprogramar un turno de Juan (403 PROHIBIDO)
+PUT {{base}}/turnos/{{turnoB.response.body.id}}/reprogramar
+Authorization: Bearer {{tokenMaria}}
+Content-Type: application/json
+
+{ "fecha": "2026-12-10T09:00" }
+
+### T16 - Turno inexistente (404 TURNO_NO_ENCONTRADO): la existencia se chequea ANTES que el permiso
+PUT {{base}}/turnos/999999/reprogramar
+Authorization: Bearer {{tokenJuan}}
+Content-Type: application/json
+
+{ "fecha": "2026-12-10T09:00" }
+
+### T17 - El admin finaliza el turno B (200, situacion "finalizado")
+PUT {{base}}/turnos/{{turnoB.response.body.id}}
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{ "estado": "Lavado finalizado" }
+
+### T18 - Reprogramar un turno ya atendido (409 TURNO_YA_ATENDIDO)
+PUT {{base}}/turnos/{{turnoB.response.body.id}}/reprogramar
+Authorization: Bearer {{tokenJuan}}
+Content-Type: application/json
+
+{ "fecha": "2026-12-10T09:00" }
+
+### T19 - La patente del turno B vuelve a sacar turno (201): el índice único es PARCIAL, solo mira los pendientes
+POST {{base}}/turnos
+Authorization: Bearer {{tokenJuan}}
+Content-Type: application/json
+
+{ "patente": "AD111AA", "fecha": "2026-12-11T10:00", "tipoVehiculo": "moto" }
+
+### T20 - Reprogramar a un feriado (422 FECHA_FERIADO): la nueva fecha cumple las mismas reglas que al crear
+PUT {{base}}/turnos/{{turnoC.response.body.id}}/reprogramar
+Authorization: Bearer {{tokenJuan}}
+Content-Type: application/json
+
+{ "fecha": "2026-12-25T10:00" }
+
+### ---------- Validación cruzada entre campos (refine) ----------
+
+### T21 - 'desde' posterior a 'hasta' (400, el error aparece en el campo "desde")
+GET {{base}}/turnos?desde=2026-12-31&hasta=2026-12-01
+Authorization: Bearer {{tokenAdmin}}
+
+### T22 - Fecha con formato inválido (400)
+GET {{base}}/turnos?desde=01/12/2026
+Authorization: Bearer {{tokenAdmin}}
+
+### T23 - Rango válido: turnos del 1 al 4 de diciembre (200; cada uno trae su situacion calculada)
+GET {{base}}/turnos?desde=2026-12-01&hasta=2026-12-04
+Authorization: Bearer {{tokenAdmin}}
+
+### ---------- Degradación elegante ----------
+### T24 - REINICIÁ el servidor con CALENDARIO_TYPE=fake-down y sacá un turno para María el 8/12 (feriado).
+### Responde 201 con feriadosDisponibles: false: sin calendario no se puede saber si es feriado, y se acepta igual.
+POST {{base}}/turnos
+Authorization: Bearer {{tokenMaria}}
+Content-Type: application/json
+
+{ "patente": "AB999CD", "fecha": "2026-12-08T10:00", "tipoVehiculo": "auto" }
+
+### ---------- Viaje en el tiempo ----------
+### REINICIÁ el servidor con CALENDARIO_TYPE=fake y CLOCK_NOW=2026-12-15T12:00:00Z (después de los turnos de Juan).
+### Los tokens siguen valiendo: su vencimiento usa la hora real.
+
+### T25 - R3 calculado: los turnos pendientes de Juan aparecen con situacion "ausente" y diasAusente > 0
+### (nada se actualizó en la base: es la misma fila, mirada otro día)
+GET {{base}}/turnos?estado=Esperando%20el%20servicio
+Authorization: Bearer {{tokenJuan}}
+
+### T26 - R3: con turnos ausentes no se saca otro (409 CLIENTE_CON_AUSENCIAS, con el detalle de cuáles)
+POST {{base}}/turnos
+Authorization: Bearer {{tokenJuan}}
+Content-Type: application/json
+
+{ "patente": "AG444DD", "fecha": "2026-12-16T10:00", "tipoVehiculo": "auto" }
+
+### T27 - R4: un turno ausente no se reprograma (409 TURNO_AUSENTE)
+PUT {{base}}/turnos/{{turnoC.response.body.id}}/reprogramar
+Authorization: Bearer {{tokenJuan}}
+Content-Type: application/json
+
+{ "fecha": "2026-12-16T10:00" }
+
+### T28 - El CSV también trae la columna "situacion" calculada (200, mirá las filas de Juan)
+GET {{base}}/turnos/export.csv?clienteId=1
+Authorization: Bearer {{tokenAdmin}}
+
+
+### ---------- Ejercicio 9 (opcional) — con el mismo CLOCK_NOW=2026-12-15T12:00:00Z ----------
+
+### T29 - 9.2: turnos ausentes de todos los clientes (lo resuelve la base aunque "ausente" no sea una columna)
+GET {{base}}/turnos?ausentes=true
+Authorization: Bearer {{tokenAdmin}}
+
+### T30 - 9.2: ausentes + estado finalizado → [] (un turno atendido nunca está ausente)
+GET {{base}}/turnos?ausentes=true&estado=Lavado%20finalizado
+Authorization: Bearer {{tokenAdmin}}
+
+### T31 - 9.2: ausentes=false no se admite (400 VALIDACION)
+GET {{base}}/turnos?ausentes=false
+Authorization: Bearer {{tokenAdmin}}

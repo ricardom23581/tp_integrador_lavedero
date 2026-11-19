@@ -6,6 +6,11 @@ import AppError from "../errors/AppError.js";
  *  - No hay un endpoint "¿esta fecha es feriado?": siempre se pide el año completo y se busca la fecha.
  *    Por eso consultar 5 fechas del mismo año de a una son 5 pedidos, pero agrupadas por año es 1 solo.
  *
+ *  *
+ * — Decisión de NEGOCIO (no técnica): la API marca algunos días como "puente" (no laborables, optativos).
+ *  El lavadero cierra esos días, así que los contamos como feriados (no hábiles) igual que los inamovibles y
+ *  trasladables: getFeriado los devuelve y la regla FECHA_FERIADO no da turnos.
+ * 
  * Ej. 2 — ¿Por qué fetch necesita un `if (!response.ok)` aparte del try/catch?
  *  Porque fetch solo rechaza la promesa ante errores de RED (sin conexión, DNS, timeout). Si el servidor
  *  contesta un 404 o un 500, la promesa se resuelve normalmente y el catch no se entera: hay que mirar el status.

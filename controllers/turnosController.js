@@ -10,6 +10,7 @@ const turnoNoEncontrado = (id) =>
   new AppError("TURNO_NO_ENCONTRADO", `No existe un turno con id ${id}`, 404);
 
 export function makeTurnosController(useCases) {
+      // GET /api/turnos?estado=&clienteId=&desde=&hasta=&ausentes=true&sort=&page=&limit=
     const listar = async (req, res) => {
     const { items, total } = await useCases.getTurnos(req.validated.query, req.user);
     res.set("X-Total-Count", String(total));
@@ -41,7 +42,16 @@ export function makeTurnosController(useCases) {
   
   const crear = async (req, res) => {
     const nuevo = await useCases.createTurno(req.body, req.user);
-    res.status(201).json(nuevo);
+    // Clase 13: 201 + Location, la URL del recurso recién creado
+    res.status(201).location(`/api/turnos/${nuevo.id}`).json(nuevo);
+  };
+
+  // PUT /api/turnos/:id/reprogramar (Clase 13, R4). Modifica un turno existente: 200, no 201,
+  // porque no se crea ningún recurso nuevo.
+  const reprogramar = async (req, res) => {
+    const { id } = req.validated.params;
+    const turno = await useCases.reprogramarTurno(id, req.body, req.user);
+    res.status(200).json(turno);
   };
 
   const actualizar = async (req, res) => {
@@ -58,5 +68,5 @@ export function makeTurnosController(useCases) {
     res.status(204).end();
   };
 
-  return { listar, obtener, detalle, exportarCsv, crear, actualizar, eliminar };
+  return { listar, obtener, detalle, exportarCsv, crear, reprogramar, actualizar, eliminar };
 }
