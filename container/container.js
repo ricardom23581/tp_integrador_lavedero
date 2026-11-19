@@ -23,6 +23,11 @@ import { crearUsuariosRouter } from "../routes/usuariosRoutes.js";
 import { crearAuthRouter } from "../routes/authRoutes.js";
 
 import seedAdmin from "../usecases/auth/seedAdmin.js";
+// Clase 12: calendario de feriados (API externa)
+import { getCalendario } from "../gateways/calendarioFactory.js";
+import makeFeriadoUseCases from "../usecases/feriados/makeFeriadoUseCases.js";
+import { makeFeriadosController } from "../controllers/feriadosController.js";
+import { crearFeriadosRouter } from "../routes/feriadosRoutes.js";
 
 export async function crearContainer() {
   // Seguridad: el hasher se crea primero porque el seed de usuarios necesita guardar hashes.
@@ -47,22 +52,28 @@ export async function crearContainer() {
   const notifier = makeNotifier(config.notifier);
   registerTurnoListeners(events, notifier);
 
+    // Calendario de feriados: real (ArgentinaDatos) o falso según config. Se crea UNA sola vez
+  // y se comparte entre turnos y feriados. Timeout y concurrencia llegan por inyección.
+  const calendario = getCalendario(config.calendario);
   const useCases = {
-    turnos: makeTurnoUseCases(daos.turnosDao, daos.usuariosDao, events),
+    turnos: makeTurnoUseCases(daos.turnosDao, daos.usuariosDao, events, calendario),
     usuarios: makeUsuarioUseCases(daos.usuariosDao, daos.turnosDao, hasher),
     auth: makeAuthUseCases(daos.usuariosDao, hasher, tokens),
+    feriados: makeFeriadoUseCases(calendario, { concurrency: config.calendario.concurrency }),
   };
 
   const controllers = {
     turnos: makeTurnosController(useCases.turnos),
     usuarios: makeUsuariosController(useCases.usuarios),
     auth: makeAuthController(useCases.auth),
+    feriados: makeFeriadosController(useCases.feriados),
   };
 
   const router = Router();
   router.use("/auth", crearAuthRouter(controllers.auth, auth, config.loginRateLimitMax));
   router.use("/turnos", crearTurnosRouter(controllers.turnos, auth));
   router.use("/usuarios", crearUsuariosRouter(controllers.usuarios, auth));
+  router.use("/feriados", crearFeriadosRouter(controllers.feriados, auth));
 
   return { daos, events, useCases, controllers, router };
 }

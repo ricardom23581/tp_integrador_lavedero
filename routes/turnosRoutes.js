@@ -11,6 +11,7 @@ import {
   actualizarTurnoSchema,
   idParamSchema,
   listarTurnosQuerySchema,
+  exportarTurnosQuerySchema,
 } from "../schemas/turnoSchema.js";
 
 export function crearTurnosRouter(controller, { authenticate, authorize }) {
@@ -20,6 +21,17 @@ export function crearTurnosRouter(controller, { authenticate, authorize }) {
   router.use(authenticate);
 
   router.get("/", validate(listarTurnosQuerySchema, "query"), controller.listar);
+    // Clase 12. ¿Qué pasaría si "/export.csv" se declarara DESPUÉS de "/:id"?
+  // Express prueba las rutas en orden y "/:id" acepta cualquier texto, incluido "export.csv":
+  // la validación del id respondería un 400 y la exportación nunca se ejecutaría.
+  // Por eso las rutas fijas van antes que las que tienen parámetros.
+  router.get(
+    "/export.csv",
+    authorize("admin"),
+    validate(exportarTurnosQuerySchema, "query"),
+    controller.exportarCsv
+  );
+  router.get("/:id/detalle", validate(idParamSchema, "params"), controller.detalle);
   router.get("/:id", validate(idParamSchema, "params"), controller.obtener);
   router.post("/", validate(crearTurnoSchema), controller.crear);
   router.put(

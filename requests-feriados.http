@@ -1,0 +1,125 @@
+### =====================================================================
+### Clase 12 — Calendario de feriados (API externa) y exportación a CSV
+### Ejecutar en orden. El título dice el código esperado.
+### Para probar sin internet: CALENDARIO_TYPE=fake en el .env (el año 1999 simula un error 500).
+### Feriados que se usan: 2026-12-25 (Navidad), 2026-07-09 (Independencia), 2026-11-23 (Soberanía Nacional).
+### =====================================================================
+@base = http://localhost:3000/api
+@cincoFechas = 2026-12-25,2026-07-09,2026-11-20,2026-11-23,2026-11-24
+
+### F0 - Login admin (200)
+# @name loginAdmin
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "email": "{{$dotenv ADMIN_EMAIL}}", "password": "{{$dotenv ADMIN_PASSWORD}}" }
+
+###
+@tokenAdmin = {{loginAdmin.response.body.token}}
+
+### F0b - Login cliente Juan, id 1 (200)
+# @name loginJuan
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "email": "cliente@test.com", "password": "cliente1234" }
+
+###
+@tokenJuan = {{loginJuan.response.body.token}}
+
+### ---------- Ejercicio 3: detalle enriquecido ----------
+
+### F1 - Detalle de un turno: turno + calendarioStatus "habil" (200)
+GET {{base}}/turnos/1/detalle
+Authorization: Bearer {{tokenAdmin}}
+
+### F2 - Detalle de un turno inexistente (404 TURNO_NO_ENCONTRADO)
+GET {{base}}/turnos/999/detalle
+Authorization: Bearer {{tokenAdmin}}
+
+### F3 - Detalle sin token (401 TOKEN_FALTANTE)
+GET {{base}}/turnos/1/detalle
+
+### F4 - Juan ve el detalle de un turno de María (403 PROHIBIDO: mismas reglas que GET /turnos/:id)
+GET {{base}}/turnos/3/detalle
+Authorization: Bearer {{tokenJuan}}
+
+### ---------- Regla de negocio: el lavadero no abre los feriados ----------
+
+### F5 - Sacar turno en Navidad (422 FECHA_FERIADO)
+POST {{base}}/turnos
+Authorization: Bearer {{tokenJuan}}
+Content-Type: application/json
+
+{ "patente": "AC456BD", "fecha": "2026-12-25T10:00", "tipoVehiculo": "auto" }
+
+### F6 - Sacar turno un día hábil (201)
+POST {{base}}/turnos
+Authorization: Bearer {{tokenJuan}}
+Content-Type: application/json
+
+{ "patente": "AC456BD", "fecha": "2026-11-24T10:00", "tipoVehiculo": "auto" }
+
+
+### ---------- Ejercicio 4 y 5: secuencial, paralelo, limitado y agrupado ----------
+
+### F7 - 5 fechas en modo SECUENCIAL (mirá httpRequests y elapsedMs)
+GET {{base}}/feriados/verificar?mode=sequential&fechas={{cincoFechas}}
+Authorization: Bearer {{tokenJuan}}
+
+### F8 - Las mismas 5 en PARALELO (mismo resultado, mucho menos tiempo)
+GET {{base}}/feriados/verificar?mode=parallel&fechas={{cincoFechas}}
+Authorization: Bearer {{tokenJuan}}
+
+### F9 - Las mismas 5 en paralelo LIMITADO (máximo EXTERNAL_CONCURRENCY a la vez)
+GET {{base}}/feriados/verificar?mode=limited&fechas={{cincoFechas}}
+Authorization: Bearer {{tokenJuan}}
+
+### F10 - Las mismas 5 AGRUPADAS por año (un solo pedido HTTP)
+GET {{base}}/feriados/verificar?mode=batch&fechas={{cincoFechas}}
+Authorization: Bearer {{tokenJuan}}
+
+### F11 - Con una fecha de 1999 (solo fake): en parallel falla UNA; en batch fallan todas las de 1999
+GET {{base}}/feriados/verificar?mode=parallel&fechas=2026-12-25,1999-05-01,2026-11-24
+Authorization: Bearer {{tokenJuan}}
+
+### F12 - Fecha con formato inválido (400 VALIDACION)
+GET {{base}}/feriados/verificar?fechas=25/12/2026
+Authorization: Bearer {{tokenJuan}}
+
+### F13 - Modo inexistente (400 VALIDACION)
+GET {{base}}/feriados/verificar?fechas=2026-12-25&mode=rapido
+Authorization: Bearer {{tokenJuan}}
+
+### F14 - Verificar sin token (401)
+GET {{base}}/feriados/verificar?fechas=2026-12-25
+
+
+### ---------- Ejercicio 6: exportar turnos a CSV (solo admin) ----------
+
+### F15 - Exportar todos los turnos (200, se descarga turnos-AAAA-MM-DD.csv)
+GET {{base}}/turnos/export.csv
+Authorization: Bearer {{tokenAdmin}}
+
+### F16 - Exportar con los filtros del listado: un estado, ordenado por fecha descendente
+GET {{base}}/turnos/export.csv?estado=Esperando%20el%20servicio&sort=-fecha
+Authorization: Bearer {{tokenAdmin}}
+
+### F17 - Exportar enriquecido con la columna "feriado" (mirá el header X-Enrichment: ok)
+GET {{base}}/turnos/export.csv?enriquecer=true
+Authorization: Bearer {{tokenAdmin}}
+
+### F18 - Separador ";" para que Excel en español lo abra en columnas
+GET {{base}}/turnos/export.csv?enriquecer=true&separador=;
+Authorization: Bearer {{tokenAdmin}}
+
+### F19 - Exportar como cliente (403 PROHIBIDO)
+GET {{base}}/turnos/export.csv
+Authorization: Bearer {{tokenJuan}}
+
+### F20 - Exportar sin token (401)
+GET {{base}}/turnos/export.csv
+
+### F21 - Separador inválido (400 VALIDACION)
+GET {{base}}/turnos/export.csv?separador=x
+Authorization: Bearer {{tokenAdmin}}

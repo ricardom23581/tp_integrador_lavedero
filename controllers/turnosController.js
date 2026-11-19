@@ -10,21 +10,37 @@ const turnoNoEncontrado = (id) =>
   new AppError("TURNO_NO_ENCONTRADO", `No existe un turno con id ${id}`, 404);
 
 export function makeTurnosController(useCases) {
-  const listar = async (req, res) => {
-    const { items, total } = await useCases.getTurnos(req.validated.query);
+    const listar = async (req, res) => {
+    const { items, total } = await useCases.getTurnos(req.validated.query, req.user);
     res.set("X-Total-Count", String(total));
     res.status(200).json(items);
   };
 
   const obtener = async (req, res) => {
     const { id } = req.validated.params;
-    const turno = await useCases.getTurnoById(id);
+    const turno = await useCases.getTurnoById(id, req.user);
     if (!turno) throw turnoNoEncontrado(id);
     res.status(200).json(turno);
   };
 
+    // GET /api/turnos/:id/detalle (Clase 12): turno + si ese día es feriado
+  const detalle = async (req, res) => {
+    const { id } = req.validated.params;
+    const turno = await useCases.getTurnoDetalle(id, req.user);
+    if (!turno) throw turnoNoEncontrado(id);
+    res.status(200).json(turno);
+  };
+  
+    // GET /api/turnos/export.csv (Clase 12): descarga del listado en CSV
+  const exportarCsv = async (req, res) => {
+    const { csv, filename, enrichment } = await useCases.exportTurnosCsv(req.validated.query, req.user);
+    res.set("X-Enrichment", enrichment); // ok | unavailable | skipped
+    res.attachment(filename); // Content-Disposition: attachment (se descarga) + Content-Type: text/csv
+    res.send(csv);
+  };
+  
   const crear = async (req, res) => {
-    const nuevo = await useCases.createTurno(req.body);
+    const nuevo = await useCases.createTurno(req.body, req.user);
     res.status(201).json(nuevo);
   };
 
@@ -42,5 +58,5 @@ export function makeTurnosController(useCases) {
     res.status(204).end();
   };
 
-  return { listar, obtener, crear, actualizar, eliminar };
+  return { listar, obtener, detalle, exportarCsv, crear, actualizar, eliminar };
 }

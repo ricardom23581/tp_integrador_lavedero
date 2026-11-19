@@ -100,3 +100,19 @@ export const listarTurnosQuerySchema = z.object({
     .default(20),
 });
 
+// GET /api/turnos/export.csv (Clase 12) — los mismos filtros del listado + enriquecer + separador.
+// limit por defecto 100 (en el listado es 20): un export suele querer más filas.
+export const exportarTurnosQuerySchema = listarTurnosQuerySchema.extend({
+  limit: z.coerce
+    .number({ error: "limit debe ser un número" })
+    .int()
+    .positive("limit debe ser mayor a 0")
+    .max(100, "limit no puede superar 100")
+    .default(100),
+  enriquecer: z
+    .enum(["true", "false"], { error: "enriquecer debe ser 'true' o 'false'" })
+    .transform((v) => v === "true")
+    .optional(),
+  separador: z.enum([",", ";"], { error: "separador debe ser ',' o ';'" }).default(","), // ";" para Excel en español
+});
+

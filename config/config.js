@@ -34,6 +34,15 @@ const config = {
     password: process.env.ADMIN_PASSWORD,
   },
 
+    // Calendario de feriados (Clase 12): API externa (ArgentinaDatos) o uno falso para trabajar sin red
+  calendario: {
+    type: process.env.CALENDARIO_TYPE || "argentinadatos", // "argentinadatos" o "fake"
+    baseUrl: process.env.FERIADOS_API_URL || "https://api.argentinadatos.com",
+    timeoutMs: Number(process.env.EXTERNAL_TIMEOUT_MS) || 5000, // espera máxima por pedido externo
+    concurrency: Number(process.env.EXTERNAL_CONCURRENCY) || 3, // pedidos externos simultáneos (modo "limited")
+    fakeLatencyMs: Number(process.env.FAKE_LATENCY_MS) || 300, // demora simulada por pedido del calendario fake
+  },
+
   // Notificador de eventos: console | file
   notifier: {
     type: process.env.NOTIFIER_TYPE || "console",
