@@ -1,7 +1,9 @@
 import AppError from "../../errors/AppError.js";
 import { EVENTS } from "../../events/eventNames.js";
-import { estaAusente, conSituacion, ESTADO_PENDIENTE } from "../../domain/situacionTurno.js";
+import { conSituacion, ESTADO_PENDIENTE } from "../../domain/situacionTurno.js";
 import { validarFechaFutura, validarCalendario } from "./reglasDeFecha.js";
+
+import assertSinAusencias from "./assertSinAusencias.js"; // ← NUEVO (Clase 14 - Ej. 10.3)
 
 // Ejercicio 8.6 — Status codes de POST /api/turnos:
 //   | Situación                                  | Status | code                                      |
@@ -70,15 +72,7 @@ async function createTurno(data, actor, { turnosDao, usuariosDao, events, calend
   }
 
   // R3 va antes que R1: si tiene un turno ausente, el mensaje útil es "resolvé eso", no "llegaste al tope"
-  const ausentes = pendientes.filter((t) => estaAusente(t, hoy));
-  if (ausentes.length > 0) {
-    throw new AppError(
-      "CLIENTE_CON_AUSENCIAS",
-      "El cliente tiene turnos a los que no se presentó: hay que resolverlos con el lavadero antes de sacar otro",
-      409,
-      ausentes.map((t) => ({ turnoId: t.id, patente: t.patente, fecha: t.fecha }))
-    );
-  }
+    assertSinAusencias(pendientes, hoy, "sacar otro"); // ← CAMBIÓ (Clase 14 - Ej. 10.3): regla compartida con R6
 
   // R1: los ausentes ya cortaron arriba, así que acá todos los pendientes son a futuro (o de hoy)
   if (pendientes.length >= reglas.maxPendientes) {

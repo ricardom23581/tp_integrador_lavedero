@@ -1,6 +1,7 @@
 import AppError from "../../errors/AppError.js";
 import { estaAusente, conSituacion, ESTADO_PENDIENTE } from "../../domain/situacionTurno.js";
 import { validarFechaFutura, validarCalendario } from "./reglasDeFecha.js";
+import assertSinAusencias from "./assertSinAusencias.js";
 
 /**
  * Caso de uso: reprogramar un turno (regla R4).
@@ -10,6 +11,7 @@ import { validarFechaFutura, validarCalendario } from "./reglasDeFecha.js";
  *  - PROHIBIDO (403)                  un cliente solo reprograma los suyos
  *  - TURNO_YA_ATENDIDO (409)          no se reprograma un turno en proceso o finalizado
  *  - TURNO_AUSENTE (409)              un turno al que no se presentó no se reprograma: hay que resolverlo
+ *  - CLIENTE_CON_AUSENCIAS (409)      R6: tampoco si el cliente tiene OTRO turno ausente (Clase 14 - Ej. 10.3)
  *  - LIMITE_REPROGRAMACIONES (409)    se reprograma como máximo `maxReprogramaciones` veces
  *  - FECHA_PASADA / FECHA_FUERA_DE_RANGO / FECHA_FERIADO (422)   la nueva fecha cumple las mismas reglas que al crear
  * La anticipación se cuenta desde HOY (no desde la fecha anterior del turno): es un turno nuevo en el calendario.
@@ -30,6 +32,10 @@ async function reprogramarTurno(id, { fecha }, actor, { turnosDao, calendario, c
   if (estaAusente(turno, hoy)) {
     throw new AppError("TURNO_AUSENTE", "El cliente no se presentó a este turno: no se puede reprogramar", 409);
   }
+  // R6 (Clase 14 - Ej. 10.3, TDD): no se reprograma si el DUEÑO tiene OTRO turno ausente (este ya se miró arriba)
+  const pendientes = await turnosDao.getAll({ clienteId: turno.clienteId, estado: ESTADO_PENDIENTE });
+  assertSinAusencias(pendientes.filter((t) => t.id !== turno.id), hoy, "reprogramar");
+
   if (turno.reprogramaciones >= reglas.maxReprogramaciones) {
     throw new AppError(
       "LIMITE_REPROGRAMACIONES",

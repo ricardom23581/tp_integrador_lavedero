@@ -66,24 +66,30 @@ export default class TurnosSequelizeDao {
     return TurnoModel.findByPk(id, { raw: true });
   }
 
-  // Ejercicio 9.1 — R1 sin carrera: si llega `maxPendientes`, el CONTEO de pendientes del cliente y el ALTA van
+    // Ejercicio 9.1 — R1 sin carrera: si llega `maxPendientes`, el CONTEO de pendientes del cliente y el ALTA van
   // en la MISMA transacción. El índice único no puede expresar "como máximo 3", así que la base no lo frena sola.
   // En SQLite, una transacción IMMEDIATE toma el lock de escritura al empezar: un segundo pedido simultáneo
   // espera a que termine el primero y, cuando cuenta, ya ve el turno nuevo. (En PostgreSQL/MySQL se haría
   // con SELECT ... FOR UPDATE sobre el cliente, o con nivel SERIALIZABLE.)
+  // Clase 14 - Ej. 10.2: el test de contrato mostró que, con el tope alcanzado Y la patente duplicada a la vez,
+  // este adaptador respondía LIMITE_TURNOS_PENDIENTES y el de memoria PATENTE_CON_TURNO_PENDIENTE (que es lo que
+  // también responde el caso de uso, que chequea la patente primero). Ahora el orden es el mismo que en memoria:
+  // primero el ALTA (el índice único parcial rechaza el duplicado) y después el CONTEO, que ya incluye el turno
+  // nuevo: si se pasa del tope, se lanza el error y la transacción se deshace entera (el alta también).
   async save({ maxPendientes, ...data }) {
     const creado = await traducirDuplicado(() =>
       sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE }, async (t) => {
+        const turno = await TurnoModel.create(data, { transaction: t });
         if (maxPendientes !== undefined) {
           const pendientes = await TurnoModel.count({
             where: { clienteId: data.clienteId, estado: PENDIENTE },
             transaction: t,
           });
-          if (pendientes >= maxPendientes) {
+          if (pendientes > maxPendientes) {
             throw new AppError("LIMITE_TURNOS_PENDIENTES", `Un cliente puede tener hasta ${maxPendientes} turnos pendientes`, 409);
           }
         }
-        return TurnoModel.create(data, { transaction: t });
+        return turno;
       })
     );
     return creado.get({ plain: true });

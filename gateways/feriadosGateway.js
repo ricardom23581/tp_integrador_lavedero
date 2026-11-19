@@ -22,8 +22,12 @@ import AppError from "../errors/AppError.js";
  *   - getFeriado(fecha)          → { fecha, nombre, tipo } | null    (1 pedido HTTP: el año de esa fecha)
  *   - getFeriadosDeAnios(anios)  → { "AAAA-MM-DD": { fecha, nombre, tipo } }   (1 pedido por año)
  * Traduce el modelo externo al nuestro: lo de la API no se filtra hacia adentro de la aplicación.
+ *  *
+ * Clase 14 - Ej. 7: `fetchFn` llega INYECTADO (por defecto, el fetch global). Antes el gateway llamaba directo al
+ * fetch global y no había forma de probar "¿qué pasa si la API responde 500, tarda o manda basura?" sin depender
+ * de internet y de que ArgentinaDatos justo falle. Ahora el test le pasa un fetch falso que responde lo que quiere.
  */
-function createFeriadosGateway({ baseUrl, timeoutMs }) {
+function createFeriadosGateway({ baseUrl, timeoutMs, fetchFn = fetch }) {
   // Modelo externo → modelo propio. Con ?? porque la API puede omitir campos.
   const toFeriado = (raw) => ({
     fecha: raw.fecha,
@@ -35,7 +39,7 @@ function createFeriadosGateway({ baseUrl, timeoutMs }) {
   async function fetchAnio(anio) {
     let response;
     try {
-      response = await fetch(`${baseUrl}/v1/feriados/${anio}`, {
+      response = await fetchFn(`${baseUrl}/v1/feriados/${anio}`, {
         headers: { "User-Agent": "lavadero-api-grupo3/1.0 (ORT TP-2, clase 12)" },
         // Sin timeout, un servidor externo colgado deja colgado también nuestro request
         signal: AbortSignal.timeout(timeoutMs),
