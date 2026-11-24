@@ -1,0 +1,178 @@
+# Documento OpenAPI escrito A MANO (Clase 15, ejercicio 1).
+#
+# Es un ejercicio para entender el formato antes de generarlo desde Zod (pasos siguientes).
+# La documentación activa se sirve en /docs y el contrato generado en /openapi.json.
+# Se puede pegar en https://editor.swagger.io para ver el resultado y los errores.
+#
+# Preguntas para reflexionar:
+#
+# 1) ¿Diferencia entre `openapi: 3.1.0` y el `version` de `info`?
+#    `openapi` es la versión de la ESPECIFICACIÓN con la que está escrito este documento (las reglas del
+#    formato). `info.version` es la versión de NUESTRA API (el contrato del lavadero). Una cambia cuando
+#    cambia el estándar; la otra, cuando cambia nuestra API.
+#
+# 2) ¿Por qué el path es `/turnos/{id}` y no `/turnos/:id`?
+#    Porque `:id` es la sintaxis de Express, y OpenAPI es un estándar independiente del framework: usa llaves.
+#    Además el parámetro tiene que declararse en `parameters` con `in: path`.
+#
+# 3) ¿Qué pasaría con el login si me olvidara del `security: []`, teniendo un `security` global?
+#    La operación heredaría el `security` global: Swagger UI exigiría un token para llamar a /auth/login,
+#    que es justamente el endpoint que sirve para OBTENER el token (círculo sin salida). `security: []`
+#    declara "esta operación es pública" y pisa el global.
+
+openapi: 3.1.0
+
+info:
+  title: Lavadero API
+  version: 1.0.0
+  description: |
+    API REST de un lavadero de autos: turnos, usuarios y feriados.
+
+    **Autenticación:** `POST /auth/login` devuelve un JWT; se envía como `Authorization: Bearer <token>`.
+
+servers:
+  - url: /api
+    description: Este servidor (la API cuelga de /api)
+
+# Autenticación por defecto de TODAS las operaciones. Las públicas la pisan con `security: []`.
+security:
+  - bearerAuth: []
+
+paths:
+  /turnos/{id}:
+    get:
+      tags: [Turnos]
+      operationId: getTurnoById
+      summary: Obtener un turno por id
+      parameters:
+        - name: id
+          in: path
+          required: true # un parámetro de path SIEMPRE es obligatorio
+          description: Id del turno
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: El turno, con su situación calculada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Turno"
+        "404":
+          description: No existe un turno con ese id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: TURNO_NO_ENCONTRADO
+                  message: No existe un turno con id 99
+
+  /auth/login:
+    post:
+      tags: [Autenticación]
+      operationId: login
+      summary: Iniciar sesión
+      description: >
+        Devuelve un JWT. En Swagger UI: copiá el `token`, tocá **Authorize** y pegalo (sin la palabra Bearer).
+      security: [] # público: pisa el `security` global
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 1
+            example:
+              email: admin@lavadero.com
+              password: "<la contraseña de tu .env>"
+      responses:
+        "200":
+          description: Sesión iniciada
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token, usuario]
+                properties:
+                  token:
+                    type: string
+                    description: JWT firmado
+                  usuario:
+                    $ref: "#/components/schemas/Usuario"
+        "401":
+          description: Email o contraseña incorrectos (el mismo error para ambos casos)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: CREDENCIALES_INVALIDAS
+                  message: Email o contraseña incorrectos
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: El `token` que devuelve `POST /auth/login`
+
+  schemas:
+    Turno:
+      type: object
+      required: [id, clienteId, patente, fecha, tipoVehiculo, estado, reprogramaciones, situacion, diasAusente]
+      properties:
+        id: { type: integer, example: 1 }
+        clienteId: { type: integer, example: 1 }
+        patente: { type: string, example: ABC123 }
+        fecha:
+          type: string
+          description: Día y hora del turno, en hora del lavadero (sin zona horaria)
+          example: "2026-11-24T09:00"
+        tipoVehiculo: { type: string, enum: [moto, auto, camioneta] }
+        estado:
+          type: string
+          enum: [Esperando el servicio, En proceso de lavado, Lavado finalizado]
+        reprogramaciones: { type: integer, minimum: 0 }
+        situacion:
+          type: string
+          description: Se CALCULA según el día de hoy, no se guarda
+          example: pendiente
+        diasAusente: { type: integer, minimum: 0 }
+
+    Usuario:
+      type: object
+      required: [id, nombre, email, rol]
+      properties:
+        id: { type: integer, example: 1 }
+        nombre: { type: string }
+        email: { type: string, format: email }
+        rol: { type: string, enum: [admin, user] }
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              description: Estable. Comparar este campo, no el `message`.
+            message: { type: string }
+            details:
+              type: array
+              description: Solo en errores de validación
+              items: { type: object }

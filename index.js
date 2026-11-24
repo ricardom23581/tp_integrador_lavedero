@@ -6,6 +6,7 @@
 import express from "express";
 import config from "./config/config.js";
 import { crearContainer } from "./container/container.js";
+import { crearDocsRouter } from "./routes/docsRoutes.js";
 import logger from "./middlewares/logger.js";
 import notFound from "./middlewares/notFound.js";
 import errorHandler from "./middlewares/errorHandler.js";
@@ -19,6 +20,10 @@ app.use(express.json()); // 2º: parsea el body antes de que lo usen las rutas
 app.get("/health", (req, res) => {
   res.json({ status: "ok", persistence: config.persistenceType });
 });
+
+if (config.docsEnabled) {
+  app.use(crearDocsRouter());
+}
 
 app.use("/api", container.router); // 3º: las rutas de la API
 

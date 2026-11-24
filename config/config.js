@@ -14,6 +14,9 @@ if (!JWT_SECRET) {
 
 const config = {
   port: Number(process.env.PORT) || 3000,
+  docsEnabled: process.env.DOCS_ENABLED === undefined
+    ? process.env.NODE_ENV !== "production"
+    : process.env.DOCS_ENABLED === "true",
   persistenceType: process.env.PERSISTENCE_TYPE || "memory",
   sqliteStorage: process.env.SQLITE_STORAGE || "./data/lavadero.sqlite",
  

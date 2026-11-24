@@ -48,7 +48,12 @@ const campos = {
     .refine(fechaExiste, { message: "La fecha no existe", abort: true })
     // Clase 13 — R5: horario de atención. Va DESPUÉS del formato y de que la fecha exista.
     // Sigue siendo una validación de FORMA: se decide mirando solo el dato, sin consultar nada.
-    .refine(esHorarioDeAtencion, "El lavadero atiende de 08:00 a 16:45, en turnos cada 15 minutos (:00, :15, :30, :45)"),
+    .refine(esHorarioDeAtencion, "El lavadero atiende de 08:00 a 16:45, en turnos cada 15 minutos (:00, :15, :30, :45)")
+    .meta({
+      description:
+        "Fecha y hora local del lavadero (YYYY-MM-DDTHH:mm). Debe existir, ser futura y estar entre 08:00 y 16:45 en intervalos de 15 minutos.",
+      examples: ["2026-12-10T09:30"],
+    }),
   tipoVehiculo: z.enum(TIPOS_VEHICULO, {
     error: `tipoVehiculo debe ser uno de: ${TIPOS_VEHICULO.join(", ")}`,
   }),
@@ -99,8 +104,14 @@ const filtrosListado = z.object({
   fecha: z.string().regex(REGEX_DIA, "fecha debe tener el formato YYYY-MM-DD").optional(),
   patente: z.string().trim().toUpperCase().optional(),
   // Clase 13: rango de días (inclusive en los dos extremos)
-  desde: z.iso.date({ error: "desde debe tener el formato YYYY-MM-DD" }).optional(),
-  hasta: z.iso.date({ error: "hasta debe tener el formato YYYY-MM-DD" }).optional(),
+  desde: z
+    .iso.date({ error: "desde debe tener el formato YYYY-MM-DD" })
+    .meta({ description: "Inicio del rango (inclusive). No puede ser posterior a `hasta`." })
+    .optional(),
+  hasta: z
+    .iso.date({ error: "hasta debe tener el formato YYYY-MM-DD" })
+    .meta({ description: "Fin del rango (inclusive). No puede ser anterior a `desde`." })
+    .optional(),
     // Ejercicio 9.2: solo "true" (turnos pendientes cuyo día ya pasó). "false" sería ambiguo: ¿pendientes o atendidos?
   ausentes: z.enum(["true"], { error: "ausentes solo admite 'true'" }).transform(() => true).optional(),
   sort: z

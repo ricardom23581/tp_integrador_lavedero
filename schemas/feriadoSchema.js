@@ -10,6 +10,7 @@ const REGEX_DIA = /^\d{4}-\d{2}-\d{2}$/;
 export const verificarFeriadosQuerySchema = z.object({
   fechas: z
     .string({ error: "fechas es obligatorio (YYYY-MM-DD separadas por coma)" })
+    .meta({ description: "Entre 1 y 10 fechas YYYY-MM-DD separadas por coma. No repitas fechas." })
     .transform((value) => [...new Set(value.split(",").map((f) => f.trim()).filter(Boolean))])
     .pipe(
       z
@@ -21,5 +22,6 @@ export const verificarFeriadosQuerySchema = z.object({
     .enum(["sequential", "parallel", "limited", "batch"], {
       error: "mode debe ser sequential, parallel, limited o batch",
     })
+    .meta({ description: "Estrategia de consulta; por defecto `batch`." })
     .default("batch"),
 });
